@@ -143,6 +143,23 @@ class DatabaseInitializer:
         );
         """
 
+        create_ska1 = """
+        CREATE TABLE IF NOT EXISTS ska1 (
+            ktopl VARCHAR(4),
+            saknr VARCHAR(10),
+            xbilk VARCHAR(1),
+            erdat DATE,
+            ernam VARCHAR(12),
+            gvtyp VARCHAR(2),
+            ktoks VARCHAR(4),
+            xloev VARCHAR(1),
+            xspea VARCHAR(1),
+            xspeb VARCHAR(1),
+            xspec VARCHAR(1),
+            txt50 VARCHAR(50)
+        );
+        """
+
         with self.database.engine.begin() as connection:
             connection.execute(text(create_kna1))
             connection.execute(text(create_anla))
@@ -151,5 +168,6 @@ class DatabaseInitializer:
             connection.execute(text(create_lfb1))
             connection.execute(text(create_lfbw))
             connection.execute(text(create_proj))
+            connection.execute(text(create_ska1))
 
         LOGGER.info("Database tables initialized successfully")
