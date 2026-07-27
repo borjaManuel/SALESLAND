@@ -114,11 +114,29 @@ class DatabaseInitializer:
         );
         """
 
+        create_lfbw = """
+        CREATE TABLE IF NOT EXISTS lfbw (
+            lifnr VARCHAR(10),
+            bukrs VARCHAR(4),
+            witht VARCHAR(2),
+            wt_withcd VARCHAR(2),
+            wt_subjct VARCHAR(2),
+            wt_exrt NUMERIC(5,0),
+            wt_exdf VARCHAR(8),
+            wt_exdt VARCHAR(8),
+            wt_wtexm VARCHAR(15),
+            wt_exrs VARCHAR(2),
+            wt_wtstcd VARCHAR(16),
+            wt_withtr VARCHAR(2)
+        );
+        """
+
         with self.database.engine.begin() as connection:
             connection.execute(text(create_kna1))
             connection.execute(text(create_anla))
             connection.execute(text(create_knb1))
             connection.execute(text(create_lfa1))
             connection.execute(text(create_lfb1))
+            connection.execute(text(create_lfbw))
 
         LOGGER.info("Database tables initialized successfully")
