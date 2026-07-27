@@ -12,6 +12,7 @@ from loaders.lfbw_loader import LfbwLoader
 from loaders.proj_loader import ProjLoader
 from loaders.ska1_loader import Ska1Loader
 from loaders.t007a_loader import T007aLoader
+from loaders.t059z_loader import T059zLoader
 from logger.logger import Logger
 
 LOGGER = Logger.get_logger(__name__)
@@ -59,15 +60,16 @@ class ImportService:
             reader = ExcelReader()
 
             loaders = [
-                {"file": "KNA1.xlsx", "loader": Kna1Loader},
-                {"file": "ANLA.xlsx", "loader": AnlaLoader},
-                {"file": "KNB1.xlsx", "loader": Knb1Loader},
-                {"file": "LFA1.xlsx", "loader": Lfa1Loader},
-                {"file": "LFB1.xlsx", "loader": Lfb1Loader},
-                {"file": "LFBW.xlsx", "loader": LfbwLoader},
-                {"file": "PROJ.xlsx", "loader": ProjLoader},
-                {"file": "SKA1.xlsx", "loader": Ska1Loader},
-                {"file": "T007A.xlsx", "loader": T007aLoader},
+                # {"file": "KNA1.xlsx", "loader": Kna1Loader},
+                # {"file": "ANLA.xlsx", "loader": AnlaLoader},
+                # {"file": "KNB1.xlsx", "loader": Knb1Loader},
+                # {"file": "LFA1.xlsx", "loader": Lfa1Loader},
+                # {"file": "LFB1.xlsx", "loader": Lfb1Loader},
+                # {"file": "LFBW.xlsx", "loader": LfbwLoader},
+                # {"file": "PROJ.xlsx", "loader": ProjLoader},
+                # {"file": "SKA1.xlsx", "loader": Ska1Loader},
+                # {"file": "T007A.xlsx", "loader": T007aLoader},
+                {"file": "T059Z.xlsx", "loader": T059zLoader},
             ]
 
             for item in loaders:
