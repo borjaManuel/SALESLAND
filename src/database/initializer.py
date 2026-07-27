@@ -54,19 +54,32 @@ class DatabaseInitializer:
 
         create_anla = """
         CREATE TABLE IF NOT EXISTS anla (
-
             bukrs VARCHAR(4),
             anln1 VARCHAR(12),
             anln2 VARCHAR(4),
             anlkl VARCHAR(8),
             txt50 VARCHAR(50),
             erdat DATE
+        );
+        """
 
+        create_knb1 = """
+        CREATE TABLE IF NOT EXISTS knb1 (
+            kunnr VARCHAR(10),
+            bukrs VARCHAR(4),
+            akont VARCHAR(10),
+            zwels VARCHAR(10),
+            zterm VARCHAR(4),
+            ernam VARCHAR(12),
+            sperr VARCHAR(1),
+            loevm VARCHAR(1),
+            erdat DATE
         );
         """
 
         with self.database.engine.begin() as connection:
             connection.execute(text(create_kna1))
             connection.execute(text(create_anla))
+            connection.execute(text(create_knb1))
 
         LOGGER.info("Database tables initialized successfully")
