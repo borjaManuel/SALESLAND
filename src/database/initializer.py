@@ -160,6 +160,15 @@ class DatabaseInitializer:
         );
         """
 
+        create_t007a = """
+        CREATE TABLE IF NOT EXISTS t007a (
+            kalsm VARCHAR(6),
+            mwskz VARCHAR(2),
+            mwskt VARCHAR(1),
+            egbld VARCHAR(1),
+            text1 VARCHAR(50)
+        );
+        """
         with self.database.engine.begin() as connection:
             connection.execute(text(create_kna1))
             connection.execute(text(create_anla))
@@ -169,5 +178,6 @@ class DatabaseInitializer:
             connection.execute(text(create_lfbw))
             connection.execute(text(create_proj))
             connection.execute(text(create_ska1))
+            connection.execute(text(create_t007a))
 
         LOGGER.info("Database tables initialized successfully")
