@@ -1,0 +1,15 @@
+LFA1_MAPPING = {
+    "Acreedor": "lifnr",
+    "País": "land1",
+    "Nombre 1": "name1",
+    "Población": "ort01",
+    "Código postal": "pstlz",
+    "Región": "regio",
+    "Calle": "stras",
+    "Creado el": "erdat",
+    "Creado por": "ernam",
+    "Grupo de cuentas": "ktokk",
+    "Clave de idioma": "spras",
+    "Nº ident.fis.1": "stcd1",
+    "N.I.F. comunitario": "stceg",
+}
