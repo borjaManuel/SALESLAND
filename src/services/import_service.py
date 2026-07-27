@@ -7,6 +7,7 @@ from loaders.anla_loader import AnlaLoader
 from loaders.kna1_loader import Kna1Loader
 from loaders.knb1_loader import Knb1Loader
 from loaders.lfa1_loader import Lfa1Loader
+from loaders.lfb1_loader import Lfb1Loader
 from logger.logger import Logger
 
 LOGGER = Logger.get_logger(__name__)
@@ -58,6 +59,7 @@ class ImportService:
                 {"file": "ANLA.xlsx", "loader": AnlaLoader},
                 {"file": "KNB1.xlsx", "loader": Knb1Loader},
                 {"file": "LFA1.xlsx", "loader": Lfa1Loader},
+                {"file": "LFB1.xlsx", "loader": Lfb1Loader},
             ]
 
             for item in loaders:
