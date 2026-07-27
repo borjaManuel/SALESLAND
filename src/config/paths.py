@@ -9,4 +9,5 @@ SRC_DIR = ROOT_DIR / "src"
 # Logs directory of the project
 LOG_DIR = ROOT_DIR / "logs"
 
+# Data directory of the project
 DATA_DIR = ROOT_DIR / "data"
