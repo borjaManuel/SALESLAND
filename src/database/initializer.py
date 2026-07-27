@@ -131,6 +131,18 @@ class DatabaseInitializer:
         );
         """
 
+        create_proj = """
+        CREATE TABLE IF NOT EXISTS proj (
+            pspid VARCHAR(24),
+            post1 VARCHAR(40),
+            vbukr VARCHAR(4),
+            waers VARCHAR(5),
+            plfaz DATE,
+            plsez DATE,
+            profl VARCHAR(7)
+        );
+        """
+
         with self.database.engine.begin() as connection:
             connection.execute(text(create_kna1))
             connection.execute(text(create_anla))
@@ -138,5 +150,6 @@ class DatabaseInitializer:
             connection.execute(text(create_lfa1))
             connection.execute(text(create_lfb1))
             connection.execute(text(create_lfbw))
+            connection.execute(text(create_proj))
 
         LOGGER.info("Database tables initialized successfully")
