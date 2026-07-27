@@ -3,6 +3,7 @@ from config.settings import load_settings
 from database.connection import Database
 from database.initializer import DatabaseInitializer
 from excel.reader import ExcelReader
+from loaders.anla_loader import AnlaLoader
 from loaders.kna1_loader import Kna1Loader
 from logger.logger import Logger
 
@@ -39,20 +40,34 @@ class ImportService:
         database = Database(settings)
 
         try:
+
             database.test_connection()
 
             LOGGER.info("Database connection successful")
 
             initializer = DatabaseInitializer(database)
+
             initializer.create_tables()
 
             reader = ExcelReader()
 
-            dataframe = reader.read(DATA_DIR / "KNA1.xlsx")
+            loaders = [
+                {"file": "KNA1.xlsx", "loader": Kna1Loader},
+                {"file": "ANLA.xlsx", "loader": AnlaLoader},
+            ]
 
-            kna1_loader = Kna1Loader(database)
+            for item in loaders:
 
-            kna1_loader.load(dataframe)
+                LOGGER.info("Starting import: %s", item["file"])
+
+                dataframe = reader.read(DATA_DIR / item["file"])
+
+                loader = item["loader"](database)
+
+                loader.load(dataframe)
+
+                LOGGER.info("Import completed: %s", item["file"])
 
         finally:
+
             database.dispose()
