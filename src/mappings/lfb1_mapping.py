@@ -1,0 +1,16 @@
+LFB1_MAPPING = {
+    "Acreedor": "lifnr",
+    "Sociedad": "bukrs",
+    "Número de personal": "pernr",
+    "Creado el": "erdat",
+    "Creado por": "ernam",
+    "Bloqueo contab. para sociedad": "sperr",
+    "Petición de borrado p.sociedad": "loevm",
+    "Clave clasificación": "zuawa",
+    "Cuenta asociada": "akont",
+    "Vías de pago": "zwels",
+    "Bloqueo de pago": "zahls",
+    "Condiciones de pago": "zterm",
+    "País de retención": "qland",
+    "Indicador retención": "qsskz",
+}
