@@ -1,10 +1,10 @@
 import pandas as pd
-from mappings.t007a_mapping import T007A_MAPPING
 from sqlalchemy import text
 
 from database.connection import Database
 from loaders.base_loader import BaseLoader
 from logger.logger import Logger
+from mappings.t007a_mapping import T007A_MAPPING
 
 LOGGER = Logger.get_logger(__name__)
 
@@ -41,6 +41,10 @@ class T007aLoader(BaseLoader):
                 :egbld,
                 :text1
             )
+            ON CONFLICT (kalsm, mwskz) DO UPDATE SET
+                mwskt = EXCLUDED.mwskt,
+                egbld = EXCLUDED.egbld,
+                text1 = EXCLUDED.text1
         """
 
         with self.database.engine.begin() as connection:
