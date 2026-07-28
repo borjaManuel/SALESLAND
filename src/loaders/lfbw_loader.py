@@ -1,10 +1,10 @@
 import pandas as pd
-from mappings.lfbw_mapping import LFBW_MAPPING
 from sqlalchemy import text
 
 from database.connection import Database
 from loaders.base_loader import BaseLoader
 from logger.logger import Logger
+from mappings.lfbw_mapping import LFBW_MAPPING
 
 LOGGER = Logger.get_logger(__name__)
 
@@ -58,6 +58,16 @@ class LfbwLoader(BaseLoader):
                 :wt_wtstcd,
                 :wt_withtr
             )
+            ON CONFLICT (lifnr, bukrs, witht) DO UPDATE SET
+                wt_withcd = EXCLUDED.wt_withcd,
+                wt_subjct = EXCLUDED.wt_subjct,
+                wt_exrt = EXCLUDED.wt_exrt,
+                wt_exdf = EXCLUDED.wt_exdf,
+                wt_exdt = EXCLUDED.wt_exdt,
+                wt_wtexm = EXCLUDED.wt_wtexm,
+                wt_exrs = EXCLUDED.wt_exrs,
+                wt_wtstcd = EXCLUDED.wt_wtstcd,
+                wt_withtr = EXCLUDED.wt_withtr
         """
 
         with self.database.engine.begin() as connection:
