@@ -1,10 +1,10 @@
 import pandas as pd
-from mappings.lfa1_mapping import LFA1_MAPPING
 from sqlalchemy import text
 
 from database.connection import Database
 from loaders.base_loader import BaseLoader
 from logger.logger import Logger
+from mappings.lfa1_mapping import LFA1_MAPPING
 
 LOGGER = Logger.get_logger(__name__)
 
@@ -61,6 +61,19 @@ class Lfa1Loader(BaseLoader):
                 :stcd1,
                 :stceg
             )
+            ON CONFLICT (lifnr) DO UPDATE SET
+                land1 = EXCLUDED.land1,
+                name1 = EXCLUDED.name1,
+                ort01 = EXCLUDED.ort01,
+                pstlz = EXCLUDED.pstlz,
+                regio = EXCLUDED.regio,
+                stras = EXCLUDED.stras,
+                erdat = EXCLUDED.erdat,
+                ernam = EXCLUDED.ernam,
+                ktokk = EXCLUDED.ktokk,
+                spras = EXCLUDED.spras,
+                stcd1 = EXCLUDED.stcd1,
+                stceg = EXCLUDED.stceg
         """
 
         with self.database.engine.begin() as connection:
