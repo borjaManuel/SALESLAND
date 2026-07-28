@@ -27,7 +27,7 @@ class DatabaseInitializer:
         create_kna1 = """
         CREATE TABLE IF NOT EXISTS kna1 (
 
-            kunnr VARCHAR(10),
+            kunnr VARCHAR(10) PRIMARY KEY,
             land1 VARCHAR(3),
             name1 VARCHAR(35),
             ort01 VARCHAR(35),
@@ -59,7 +59,8 @@ class DatabaseInitializer:
             anln2 VARCHAR(4),
             anlkl VARCHAR(8),
             txt50 VARCHAR(50),
-            erdat DATE
+            erdat DATE,
+            PRIMARY KEY (anln1, anln2)
         );
         """
 
@@ -73,13 +74,14 @@ class DatabaseInitializer:
             ernam VARCHAR(12),
             sperr VARCHAR(1),
             loevm VARCHAR(1),
-            erdat DATE
+            erdat DATE,
+            PRIMARY KEY (kunnr, bukrs)
         );
         """
 
         create_lfa1 = """
         CREATE TABLE IF NOT EXISTS lfa1 (
-            lifnr VARCHAR(10),
+            lifnr VARCHAR(10) PRIMARY KEY,
             land1 VARCHAR(3),
             name1 VARCHAR(35),
             ort01 VARCHAR(35),
@@ -110,7 +112,8 @@ class DatabaseInitializer:
             zahls VARCHAR(1),
             zterm VARCHAR(4),
             qland VARCHAR(3),
-            qsskz VARCHAR(3)
+            qsskz VARCHAR(3),
+            PRIMARY KEY (lifnr, bukrs)
         );
         """
 
@@ -127,13 +130,14 @@ class DatabaseInitializer:
             wt_wtexm VARCHAR(15),
             wt_exrs VARCHAR(2),
             wt_wtstcd VARCHAR(16),
-            wt_withtr VARCHAR(2)
+            wt_withtr VARCHAR(2),
+            PRIMARY KEY (lifnr, bukrs, witht)
         );
         """
 
         create_proj = """
         CREATE TABLE IF NOT EXISTS proj (
-            pspid VARCHAR(24),
+            pspid VARCHAR(24) PRIMARY KEY,
             post1 VARCHAR(40),
             vbukr VARCHAR(4),
             waers VARCHAR(5),
@@ -156,7 +160,8 @@ class DatabaseInitializer:
             xspea VARCHAR(1),
             xspeb VARCHAR(1),
             xspec VARCHAR(1),
-            txt50 VARCHAR(50)
+            txt50 VARCHAR(50), 
+            PRIMARY KEY (ktopl, saknr)
         );
         """
 
@@ -166,7 +171,8 @@ class DatabaseInitializer:
             mwskz VARCHAR(2),
             mwskt VARCHAR(1),
             egbld VARCHAR(1),
-            text1 VARCHAR(50)
+            text1 VARCHAR(50),
+            PRIMARY KEY (kalsm, mwskz)
         );
         """
 
@@ -177,7 +183,8 @@ class DatabaseInitializer:
             wt_withcd VARCHAR(2),
             text40 VARCHAR(40),
             wt_qsbase VARCHAR(3),
-            wt_wtreci DECIMAL(5,2)
+            wt_wtreci DECIMAL(5,2),
+            PRIMARY KEY (land1, witht, wt_withcd)
         );
         """
         with self.database.engine.begin() as connection:
