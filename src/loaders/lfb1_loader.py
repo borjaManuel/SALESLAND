@@ -1,10 +1,10 @@
 import pandas as pd
-from mappings.lfb1_mapping import LFB1_MAPPING
 from sqlalchemy import text
 
 from database.connection import Database
 from loaders.base_loader import BaseLoader
 from logger.logger import Logger
+from mappings.lfb1_mapping import LFB1_MAPPING
 
 LOGGER = Logger.get_logger(__name__)
 
@@ -63,6 +63,19 @@ class Lfb1Loader(BaseLoader):
                 :qland,
                 :qsskz
             )
+            ON CONFLICT (lifnr, bukrs) DO UPDATE SET
+                pernr = EXCLUDED.pernr,
+                erdat = EXCLUDED.erdat,
+                ernam = EXCLUDED.ernam,
+                sperr = EXCLUDED.sperr,
+                loevm = EXCLUDED.loevm,
+                zuawa = EXCLUDED.zuawa,
+                akont = EXCLUDED.akont,
+                zwels = EXCLUDED.zwels,
+                zahls = EXCLUDED.zahls,
+                zterm = EXCLUDED.zterm,
+                qland = EXCLUDED.qland,
+                qsskz = EXCLUDED.qsskz
         """
 
         with self.database.engine.begin() as connection:
