@@ -1,10 +1,10 @@
 import pandas as pd
-from mappings.kna1_mapping import KNA1_MAPPING
 from sqlalchemy import text
 
 from database.connection import Database
 from loaders.base_loader import BaseLoader
 from logger.logger import Logger
+from mappings.kna1_mapping import KNA1_MAPPING
 
 LOGGER = Logger.get_logger(__name__)
 
@@ -94,6 +94,27 @@ class Kna1Loader(BaseLoader):
                     :stceg,
                     :stcd5
                 )
+                ON CONFLICT (kunnr) DO UPDATE SET
+                    land1 = EXCLUDED.land1,
+                    name1 = EXCLUDED.name1,
+                    ort01 = EXCLUDED.ort01,
+                    pstlz = EXCLUDED.pstlz,
+                    regio = EXCLUDED.regio,
+                    aufsd = EXCLUDED.aufsd,
+                    sortl = EXCLUDED.sortl,
+                    stras = EXCLUDED.stras,
+                    telf1 = EXCLUDED.telf1,
+                    name2 = EXCLUDED.name2,
+                    anred = EXCLUDED.anred,
+                    erdat = EXCLUDED.erdat,
+                    ernam = EXCLUDED.ernam,
+                    ktokd = EXCLUDED.ktokd,
+                    faksd = EXCLUDED.faksd,
+                    spras = EXCLUDED.spras,
+                    stcd1 = EXCLUDED.stcd1,
+                    kokrs = EXCLUDED.kokrs,
+                    stceg = EXCLUDED.stceg,
+                    stcd5 = EXCLUDED.stcd5
             """
 
         with self.database.engine.begin() as connection:
