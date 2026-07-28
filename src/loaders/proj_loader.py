@@ -1,12 +1,12 @@
 from datetime import date, datetime
 
 import pandas as pd
-from mappings.proj_mapping import PROJ_MAPPING
 from sqlalchemy import text
 
 from database.connection import Database
 from loaders.base_loader import BaseLoader
 from logger.logger import Logger
+from mappings.proj_mapping import PROJ_MAPPING
 
 LOGGER = Logger.get_logger(__name__)
 
@@ -19,13 +19,7 @@ class ProjLoader(BaseLoader):
     def load(self, dataframe):
 
         dataframe = self.transform(dataframe, PROJ_MAPPING)
-        # print(dataframe.dtypes)
 
-        # print(type(dataframe.iloc[0]["plfaz"]))
-        # print(repr(dataframe.iloc[0]["plfaz"]))
-
-        # print(type(dataframe.iloc[0]["plsez"]))
-        # print(repr(dataframe.iloc[0]["plsez"]))
         dataframe = self.transform_dates(dataframe)
 
         dataframe = dataframe.astype(object).where(pd.notnull(dataframe), None)
@@ -55,6 +49,13 @@ class ProjLoader(BaseLoader):
                 :plsez,
                 :profl
             )
+            ON CONFLICT (pspid) DO UPDATE SET
+                post1 = EXCLUDED.post1,
+                vbukr = EXCLUDED.vbukr,
+                waers = EXCLUDED.waers,
+                plfaz = EXCLUDED.plfaz,
+                plsez = EXCLUDED.plsez,
+                profl = EXCLUDED.profl
         """
 
         with self.database.engine.begin() as connection:
