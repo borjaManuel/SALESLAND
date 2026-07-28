@@ -1,10 +1,10 @@
 import pandas as pd
-from mappings.t059z_mapping import T059Z_MAPPING
 from sqlalchemy import text
 
 from database.connection import Database
 from loaders.base_loader import BaseLoader
 from logger.logger import Logger
+from mappings.t059z_mapping import T059Z_MAPPING
 
 LOGGER = Logger.get_logger(__name__)
 
@@ -44,6 +44,10 @@ class T059zLoader(BaseLoader):
                 :wt_qsbase,
                 :wt_wtreci
             )
+            ON CONFLICT (land1, witht, wt_withcd) DO UPDATE SET
+                text40 = EXCLUDED.text40,
+                wt_qsbase = EXCLUDED.wt_qsbase,
+                wt_wtreci = EXCLUDED.wt_wtreci
         """
 
         with self.database.engine.begin() as connection:
