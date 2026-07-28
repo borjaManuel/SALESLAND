@@ -1,10 +1,10 @@
 import pandas as pd
-from mappings.ska1_mapping import SKA1_MAPPING
 from sqlalchemy import text
 
 from database.connection import Database
 from loaders.base_loader import BaseLoader
 from logger.logger import Logger
+from mappings.ska1_mapping import SKA1_MAPPING
 
 LOGGER = Logger.get_logger(__name__)
 
@@ -56,6 +56,17 @@ class Ska1Loader(BaseLoader):
                 :xspec,
                 :txt50
             )
+            ON CONFLICT (ktopl, saknr) DO UPDATE SET
+                xbilk = EXCLUDED.xbilk,
+                erdat = EXCLUDED.erdat,
+                ernam = EXCLUDED.ernam,
+                gvtyp = EXCLUDED.gvtyp,
+                ktoks = EXCLUDED.ktoks,
+                xloev = EXCLUDED.xloev,
+                xspea = EXCLUDED.xspea,
+                xspeb = EXCLUDED.xspeb,
+                xspec = EXCLUDED.xspec,
+                txt50 = EXCLUDED.txt50
         """
 
         with self.database.engine.begin() as connection:
