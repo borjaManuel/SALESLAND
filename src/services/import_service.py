@@ -60,15 +60,15 @@ class ImportService:
             reader = ExcelReader()
 
             loaders = [
-                # {"file": "KNA1.xlsx", "loader": Kna1Loader},
-                # {"file": "ANLA.xlsx", "loader": AnlaLoader},
-                # {"file": "KNB1.xlsx", "loader": Knb1Loader},
-                # {"file": "LFA1.xlsx", "loader": Lfa1Loader},
-                # {"file": "LFB1.xlsx", "loader": Lfb1Loader},
-                # {"file": "LFBW.xlsx", "loader": LfbwLoader},
-                # {"file": "PROJ.xlsx", "loader": ProjLoader},
-                # {"file": "SKA1.xlsx", "loader": Ska1Loader},
-                # {"file": "T007A.xlsx", "loader": T007aLoader},
+                {"file": "KNA1.xlsx", "loader": Kna1Loader},
+                {"file": "ANLA.xlsx", "loader": AnlaLoader},
+                {"file": "KNB1.xlsx", "loader": Knb1Loader},
+                {"file": "LFA1.xlsx", "loader": Lfa1Loader},
+                {"file": "LFB1.xlsx", "loader": Lfb1Loader},
+                {"file": "LFBW.xlsx", "loader": LfbwLoader},
+                {"file": "PROJ.xlsx", "loader": ProjLoader},
+                {"file": "SKA1.xlsx", "loader": Ska1Loader},
+                {"file": "T007A.xlsx", "loader": T007aLoader},
                 {"file": "T059Z.xlsx", "loader": T059zLoader},
             ]
 
