@@ -1,10 +1,10 @@
 import pandas as pd
-from mappings.anla_mapping import ANLA_MAPPING
 from sqlalchemy import text
 
 from database.connection import Database
 from loaders.base_loader import BaseLoader
 from logger.logger import Logger
+from mappings.anla_mapping import ANLA_MAPPING
 
 LOGGER = Logger.get_logger(__name__)
 
@@ -54,7 +54,11 @@ class AnlaLoader(BaseLoader):
             :erdat
 
         )
-
+        ON CONFLICT (anln1, anln2) DO UPDATE SET
+            bukrs = EXCLUDED.bukrs,
+            anlkl = EXCLUDED.anlkl,
+            txt50 = EXCLUDED.txt50,
+            erdat = EXCLUDED.erdat
         """
 
         with self.database.engine.begin() as connection:
