@@ -34,6 +34,8 @@ The project has been designed with a modular architecture, making it easy to mai
 ├── pyproject.toml
 ├── uv.lock
 └── README.md
+└── docker-compose.yml
+
 ```
 
 ---
@@ -42,6 +44,8 @@ The project has been designed with a modular architecture, making it easy to mai
 
 * Python 3.13
 * PostgreSQL
+* Docker
+* Docker Compose
 * uv
 
 ---
@@ -61,6 +65,28 @@ Install the project dependencies:
 uv sync
 ```
 
+---
+
+## PostgreSQL with Docker
+
+The project includes a Docker Compose configuration to run a PostgreSQL
+database for development and testing purposes.
+
+Start the PostgreSQL container:
+
+```bash
+docker compose up -d
+```
+
+Check the container status:
+```bash
+docker compose ps
+```
+
+Stop the PostgreSQL container:
+```bash
+docker compose down
+```
 ---
 
 ## Configuration
@@ -121,6 +147,8 @@ Logging configuration:
 * PostgreSQL
 * python-dotenv
 * uv
+* Docker
+* Docker Compose
 
 ---
 
