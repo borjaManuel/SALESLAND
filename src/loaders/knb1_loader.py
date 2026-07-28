@@ -1,10 +1,10 @@
 import pandas as pd
-from mappings.knb1_mapping import KNB1_MAPPING
 from sqlalchemy import text
 
 from database.connection import Database
 from loaders.base_loader import BaseLoader
 from logger.logger import Logger
+from mappings.knb1_mapping import KNB1_MAPPING
 
 LOGGER = Logger.get_logger(__name__)
 
@@ -60,6 +60,14 @@ class Knb1Loader(BaseLoader):
                 :loevm,
                 :erdat
             )
+            ON CONFLICT (kunnr, bukrs) DO UPDATE SET
+                akont = EXCLUDED.akont,
+                zwels = EXCLUDED.zwels,
+                zterm = EXCLUDED.zterm,
+                ernam = EXCLUDED.ernam,
+                sperr = EXCLUDED.sperr,
+                loevm = EXCLUDED.loevm,
+                erdat = EXCLUDED.erdat
         """
 
         with self.database.engine.begin() as connection:
