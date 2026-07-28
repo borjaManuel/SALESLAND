@@ -34,25 +34,20 @@ class AnlaLoader(BaseLoader):
         sql = """
 
         INSERT INTO anla (
-
             bukrs,
             anln1,
             anln2,
             anlkl,
             txt50,
             erdat
-
         )
-
         VALUES (
-
             :bukrs,
             :anln1,
             :anln2,
             :anlkl,
             :txt50,
             :erdat
-
         )
         ON CONFLICT (anln1, anln2) DO UPDATE SET
             bukrs = EXCLUDED.bukrs,
