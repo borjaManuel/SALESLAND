@@ -5,6 +5,7 @@ from database.initializer import DatabaseInitializer
 from excel.reader import ExcelReader
 from loaders.anla_loader import AnlaLoader
 from loaders.contrapartida_clientes_loader import ContrapartidaClientesLoader
+from loaders.contrapartida_proveedores_loader import ContrapartidaProveedoresLoader
 from loaders.kna1_loader import Kna1Loader
 from loaders.knb1_loader import Knb1Loader
 from loaders.lfa1_loader import Lfa1Loader
@@ -74,6 +75,10 @@ class ImportService:
                 {
                     "file": "CONTRAPARTIDA_CLIENTES.xlsx",
                     "loader": ContrapartidaClientesLoader,
+                },
+                {
+                    "file": "CONTRAPARTIDA_PROVEEDORES.xlsx",
+                    "loader": ContrapartidaProveedoresLoader,
                 },
             ]
 
