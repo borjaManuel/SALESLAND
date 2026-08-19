@@ -187,6 +187,31 @@ class DatabaseInitializer:
             PRIMARY KEY (land1, witht, wt_withcd)
         );
         """
+
+        create_contrapartida_clientes = """
+        CREATE TABLE IF NOT EXISTS contrapartida_clientes (
+            clase_factura VARCHAR(50) PRIMARY KEY,
+            cuenta_contable VARCHAR(20) NOT NULL
+        );
+        """
+
+        create_contrapartida_proveedores = """
+        CREATE TABLE IF NOT EXISTS contrapartida_proveedores (
+            numero VARCHAR(10) PRIMARY KEY,
+            proveedor VARCHAR(100),
+            cuenta_gasto VARCHAR(20),
+            clase_documento VARCHAR(10)
+        );
+        """
+
+        create_indicador_impuesto = """
+        CREATE TABLE IF NOT EXISTS indicador_impuesto (
+            pep VARCHAR(10) PRIMARY KEY,
+            literal VARCHAR(100),
+            financiero VARCHAR(2)
+        );
+        """
+
         with self.database.engine.begin() as connection:
             connection.execute(text(create_kna1))
             connection.execute(text(create_anla))
@@ -198,5 +223,8 @@ class DatabaseInitializer:
             connection.execute(text(create_ska1))
             connection.execute(text(create_t007a))
             connection.execute(text(create_t059z))
+            connection.execute(text(create_contrapartida_clientes))
+            connection.execute(text(create_contrapartida_proveedores))
+            connection.execute(text(create_indicador_impuesto))
 
         LOGGER.info("Database tables initialized successfully")
