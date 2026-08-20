@@ -7,6 +7,7 @@ from loaders.anla_loader import AnlaLoader
 from loaders.contrapartida_clientes_loader import ContrapartidaClientesLoader
 from loaders.contrapartida_proveedores_loader import ContrapartidaProveedoresLoader
 from loaders.indicador_impuesto_loader import IndicadorImpuestoLoader
+from loaders.indicadores_iva_loader import IndicadorIvaLoader
 from loaders.kna1_loader import Kna1Loader
 from loaders.knb1_loader import Knb1Loader
 from loaders.lfa1_loader import Lfa1Loader
@@ -84,6 +85,10 @@ class ImportService:
                 {
                     "file": "INDICADOR_IMPUESTO.xlsx",
                     "loader": IndicadorImpuestoLoader,
+                },
+                {
+                    "file": "INDICADOR_IVA.xlsx",
+                    "loader": IndicadorIvaLoader,
                 },
             ]
 
