@@ -212,6 +212,15 @@ class DatabaseInitializer:
         );
         """
 
+        create_indicador_iva = """
+        CREATE TABLE IF NOT EXISTS indicador_iva (
+            indicadores_iva VARCHAR(10) PRIMARY KEY,
+            tasa VARCHAR(10),
+            tipo VARCHAR(100),
+            prorrata VARCHAR(10)
+        );
+        """
+
         with self.database.engine.begin() as connection:
             connection.execute(text(create_kna1))
             connection.execute(text(create_anla))
@@ -226,5 +235,5 @@ class DatabaseInitializer:
             connection.execute(text(create_contrapartida_clientes))
             connection.execute(text(create_contrapartida_proveedores))
             connection.execute(text(create_indicador_impuesto))
-
+            connection.execute(text(create_indicador_iva))
         LOGGER.info("Database tables initialized successfully")
