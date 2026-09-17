@@ -122,7 +122,7 @@ uv run src/main.py --check
 ## Running the Application
 
 ```bash
-uv run src/main.py
+uv run src/database_loader/main.py
 ```
 
 ---
