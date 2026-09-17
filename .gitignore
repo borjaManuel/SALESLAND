@@ -15,3 +15,6 @@ wheels/
 # Folders
 logs/
 data/
+src/export_service/TEST_KODAK_OUTPUT/
+src/export_service/TEST_SFTP_OUTPUT/
+src/export_service/TEST_SFTP_ERROR/
