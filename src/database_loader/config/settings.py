@@ -1,11 +1,10 @@
 import os
 from dataclasses import dataclass
 
+from config.paths import SRC_DIR
 from dotenv import load_dotenv
 
-from config.paths import ROOT_DIR
-
-load_dotenv(ROOT_DIR / ".env")
+load_dotenv(SRC_DIR / "database_loader" / ".env")
 
 
 @dataclass(frozen=True)
