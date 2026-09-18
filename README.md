@@ -18,6 +18,8 @@ Main responsibilities:
 * Validate application and database configuration.
 * Transform and map input data.
 * Load processed data into PostgreSQL.
+* Periodically import reference data from Excel files.
+* Move successfully processed periodic files to a history folder with a processing timestamp.
 * Provide centralized logging with automatic log rotation.
 
 ### Export Service
@@ -53,17 +55,17 @@ Main responsibilities:
 │   │   ├── mappings/
 │   │   ├── services/
 │   │   ├── .env.example
-│   │   └── main.py
+│   │   ├── main.py
+│   │   └── periodic_import.py
 │   │
 │   └── export_service/
 │       ├── config/
 │       ├── logger/
-│       ├── matcher/
-│       ├── mover/
-│       ├── renamer/
+│       ├── processor/
 │       ├── scanner/
+│       ├── services/
 │       ├── .env.example
-│       └── export_service.py
+│       └── main.py
 │
 ├── .python-version
 ├── pyproject.toml
@@ -137,7 +139,7 @@ Create the environment file from the provided template:
 cp src/database_loader/.env.example src/database_loader/.env
 ```
 
-Configure the database connection:
+Configure the database connection and periodic data directory:
 
 ```env
 DB_HOST=localhost
@@ -145,7 +147,11 @@ DB_PORT=5432
 DB_NAME=database
 DB_USER=user
 DB_PASSWORD=password
+
+PERIODIC_DATA_DIR=
 ```
+
+`PERIODIC_DATA_DIR` specifies the directory where the Excel files for periodic import are placed.
 
 ### Export Service
 
@@ -185,10 +191,18 @@ uv run src/database_loader/main.py --check
 uv run src/database_loader/main.py
 ```
 
+### Periodic Import
+
+```bash
+uv run src/database_loader/periodic_import.py
+```
+
+The periodic import process reads the available Excel files from `PERIODIC_DATA_DIR`, loads them into PostgreSQL and moves successfully processed files to the `history` subdirectory with a processing timestamp.
+
 ### Export Service
 
 ```bash
-uv run src/export_service/export_service.py
+uv run src/export_service/main.py
 ```
 
 ---
