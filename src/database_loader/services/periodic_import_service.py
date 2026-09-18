@@ -46,21 +46,20 @@ class PeriodicImportService:
                 },
             ]
 
-            for item in loaders:
+            available_files = self._get_available_files(
+                loaders,
+                settings.periodic_data_dir,
+            )
 
-                file_path = settings.periodic_data_dir / item["file"]
+            if not available_files:
+                LOGGER.info("No Excel files available for periodic import")
+                return
 
-                if not file_path.exists():
-                    LOGGER.warning(
-                        "Excel file does not exist, skipping import: %s",
-                        file_path,
-                    )
-                    continue
+            for item in available_files:
 
-                LOGGER.info(
-                    "Starting periodic import: %s",
-                    file_path.name,
-                )
+                file_path = item["file"]
+
+                LOGGER.info("Starting periodic import: %s", file_path.name)
 
                 dataframe = reader.read(file_path)
 
@@ -73,19 +72,35 @@ class PeriodicImportService:
                     settings.periodic_data_dir,
                 )
 
-                LOGGER.info(
-                    "Periodic import completed: %s",
-                    file_path.name,
-                )
+                LOGGER.info("Periodic import completed: %s", file_path.name)
 
         finally:
             database.dispose()
 
-    def _move_to_history(
-        self,
-        file_path: Path,
-        periodic_data_dir: Path,
-    ) -> None:
+    def _get_available_files(
+        self, loaders: list[dict], periodic_data_dir: Path
+    ) -> list[dict]:
+        """
+        Returns the periodic Excel files that are available for import.
+        """
+
+        available_files = []
+
+        for item in loaders:
+
+            file_path = periodic_data_dir / item["file"]
+
+            if file_path.exists():
+                available_files.append(
+                    {
+                        "file": file_path,
+                        "loader": item["loader"],
+                    }
+                )
+
+        return available_files
+
+    def _move_to_history(self, file_path: Path, periodic_data_dir: Path) -> None:
         """
         Moves a successfully processed file to the history folder
         and adds the processing timestamp to its filename.
@@ -102,7 +117,4 @@ class PeriodicImportService:
 
         shutil.move(file_path, history_file)
 
-        LOGGER.info(
-            "File moved to history: %s",
-            history_file,
-        )
+        LOGGER.info("File moved to history: %s", history_file)
