@@ -36,7 +36,7 @@ class Logger:
             )
 
             file_handler = RotatingFileHandler(
-                filename=LOG_DIR / "application.log",
+                filename=LOG_DIR / "database_loader.log",
                 maxBytes=5 * 1024 * 1024,
                 backupCount=5,
                 encoding="utf-8",
