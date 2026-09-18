@@ -1,6 +1,7 @@
 import shutil
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
+from typing import Dict, List
 
 from config.settings import load_settings
 from database.connection import Database
@@ -81,22 +82,36 @@ class PeriodicImportService:
         self, loaders: list[dict], periodic_data_dir: Path
     ) -> list[dict]:
         """
-        Returns the periodic Excel files that are available for import.
+        Returns the periodic Excel files that are available for import
+        and older than 5 minutes.
         """
 
         available_files = []
+        minimum_age = timedelta(minutes=5)
+        current_time = datetime.now()
 
         for item in loaders:
 
             file_path = periodic_data_dir / item["file"]
 
-            if file_path.exists():
-                available_files.append(
-                    {
-                        "file": file_path,
-                        "loader": item["loader"],
-                    }
+            if not file_path.exists():
+                continue
+
+            file_age = current_time - datetime.fromtimestamp(file_path.stat().st_mtime)
+
+            if file_age < minimum_age:
+                LOGGER.info(
+                    "Excel file is too recent and will not be imported: %s",
+                    file_path.name,
                 )
+                continue
+
+            available_files.append(
+                {
+                    "file": file_path,
+                    "loader": item["loader"],
+                }
+            )
 
         return available_files
 
