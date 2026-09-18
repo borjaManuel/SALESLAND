@@ -1,5 +1,6 @@
 import os
 from dataclasses import dataclass
+from pathlib import Path
 
 from config.paths import SRC_DIR
 from dotenv import load_dotenv
@@ -14,6 +15,7 @@ class Settings:
     db_name: str
     db_user: str
     db_password: str
+    periodic_data_dir: Path
 
 
 def load_settings() -> Settings:
@@ -40,4 +42,5 @@ def load_settings() -> Settings:
         db_name=os.environ["DB_NAME"],
         db_user=os.environ["DB_USER"],
         db_password=os.environ["DB_PASSWORD"],
+        periodic_data_dir=Path(os.environ["PERIODIC_DATA_DIR"]),
     )
