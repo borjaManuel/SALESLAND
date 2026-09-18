@@ -36,7 +36,7 @@ class Logger:
             )
 
             file_handler = RotatingFileHandler(
-                filename=LOG_DIR / "import_service.log",
+                filename=LOG_DIR / "export_service.log",
                 maxBytes=5 * 1024 * 1024,
                 backupCount=5,
                 encoding="utf-8",
