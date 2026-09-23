@@ -1,10 +1,10 @@
 import shutil
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Dict, List
 
 from config.settings import load_settings
 from database.connection import Database
+from database.initializer import DatabaseInitializer
 from excel.reader import ExcelReader
 from loaders.contrapartida_clientes_loader import ContrapartidaClientesLoader
 from loaders.contrapartida_proveedores_loader import ContrapartidaProveedoresLoader
@@ -25,6 +25,10 @@ class PeriodicImportService:
             database.test_connection()
 
             LOGGER.info("Database connection successful")
+
+            initializer = DatabaseInitializer(database)
+
+            initializer.create_tables()
 
             reader = ExcelReader()
 
