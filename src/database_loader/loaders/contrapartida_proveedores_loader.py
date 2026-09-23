@@ -1,9 +1,8 @@
 import pandas as pd
-from sqlalchemy import text
-
 from database.connection import Database
 from loaders.base_loader import BaseLoader
 from logger.logger import Logger
+from sqlalchemy import text
 
 LOGGER = Logger.get_logger(__name__)
 
@@ -30,6 +29,7 @@ class ContrapartidaProveedoresLoader(BaseLoader):
             - PROVEEDOR
             - CUENTA DE GASTO
             - CLASE DE DOCUMENTO
+            - PEP
 
         These columns are mapped to:
 
@@ -37,6 +37,7 @@ class ContrapartidaProveedoresLoader(BaseLoader):
             - proveedor
             - cuenta_gasto
             - clase_documento
+            - pep
 
         Args:
             dataframe: DataFrame containing the Excel data.
@@ -69,18 +70,21 @@ class ContrapartidaProveedoresLoader(BaseLoader):
                 numero,
                 proveedor,
                 cuenta_gasto,
-                clase_documento
+                clase_documento,
+                pep
             )
             VALUES (
                 :numero,
                 :proveedor,
                 :cuenta_gasto,
-                :clase_documento
+                :clase_documento,
+                :pep
             )
             ON CONFLICT (numero) DO UPDATE SET
                 proveedor = EXCLUDED.proveedor,
                 cuenta_gasto = EXCLUDED.cuenta_gasto,
-                clase_documento = EXCLUDED.clase_documento
+                clase_documento = EXCLUDED.clase_documento,
+                pep = EXCLUDED.pep
         """
 
         with self.database.engine.begin() as connection:
@@ -124,6 +128,7 @@ class ContrapartidaProveedoresLoader(BaseLoader):
             "PROVEEDOR",
             "CUENTA DE GASTO",
             "CLASE DE DOCUMENTO",
+            "PEP",
         ]
 
         missing_columns = [
@@ -142,12 +147,7 @@ class ContrapartidaProveedoresLoader(BaseLoader):
             )
 
         dataframe = dataframe[
-            [
-                "NUMERO",
-                "PROVEEDOR",
-                "CUENTA DE GASTO",
-                "CLASE DE DOCUMENTO",
-            ]
+            ["NUMERO", "PROVEEDOR", "CUENTA DE GASTO", "CLASE DE DOCUMENTO", "PEP"]
         ].copy()
 
         dataframe = dataframe.rename(
@@ -156,6 +156,7 @@ class ContrapartidaProveedoresLoader(BaseLoader):
                 "PROVEEDOR": "proveedor",
                 "CUENTA DE GASTO": "cuenta_gasto",
                 "CLASE DE DOCUMENTO": "clase_documento",
+                "PEP": "pep",
             }
         )
 
@@ -169,6 +170,8 @@ class ContrapartidaProveedoresLoader(BaseLoader):
         dataframe["clase_documento"] = (
             dataframe["clase_documento"].astype(str).str.strip()
         )
+
+        dataframe["pep"] = dataframe["pep"].astype(str).str.strip()
 
         return dataframe
 
@@ -239,6 +242,7 @@ class ContrapartidaProveedoresLoader(BaseLoader):
             "proveedor": 100,
             "cuenta_gasto": 20,
             "clase_documento": 10,
+            "pep": 20,
         }
 
         for field, size in limits.items():
@@ -284,6 +288,7 @@ class ContrapartidaProveedoresLoader(BaseLoader):
             "proveedor": 100,
             "cuenta_gasto": 20,
             "clase_documento": 10,
+            "pep": 20,
         }
 
         for field, value in record.items():
