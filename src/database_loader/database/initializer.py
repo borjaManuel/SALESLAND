@@ -1,7 +1,6 @@
-from sqlalchemy import text
-
 from database.connection import Database
 from logger.logger import Logger
+from sqlalchemy import text
 
 LOGGER = Logger.get_logger(__name__)
 
@@ -200,7 +199,8 @@ class DatabaseInitializer:
             numero VARCHAR(10) PRIMARY KEY,
             proveedor VARCHAR(100),
             cuenta_gasto VARCHAR(20),
-            clase_documento VARCHAR(10)
+            clase_documento VARCHAR(10),
+            pep VARCHAR(20)
         );
         """
 
