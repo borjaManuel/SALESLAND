@@ -23,6 +23,16 @@ class DatabaseInitializer:
         starting the data import process.
         """
 
+        create_excell_visa = """
+        CREATE TABLE IF NOT EXISTS excell_visa (
+            id SERIAL PRIMARY KEY,
+            factura VARCHAR(50) NOT NULL,
+            cuenta_contable VARCHAR(20) NOT NULL,
+            pep VARCHAR(20) NOT NULL,
+            numero_lote BIGINT NOT NULL,
+            UNIQUE (factura, numero_lote)
+        );
+        """
         create_kna1 = """
         CREATE TABLE IF NOT EXISTS kna1 (
 
@@ -222,6 +232,7 @@ class DatabaseInitializer:
         """
 
         with self.database.engine.begin() as connection:
+            connection.execute(text(create_excell_visa))
             connection.execute(text(create_kna1))
             connection.execute(text(create_anla))
             connection.execute(text(create_knb1))

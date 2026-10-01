@@ -17,6 +17,10 @@ class Settings:
     db_password: str
     periodic_data_dir: Path
 
+    @property
+    def visa_data_dir(self) -> Path:
+        return Path(os.getenv("VISA_DATA_DIR", str(self.periodic_data_dir)))
+
 
 def load_settings() -> Settings:
     """

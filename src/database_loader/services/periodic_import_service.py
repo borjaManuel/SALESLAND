@@ -10,6 +10,7 @@ from loaders.contrapartida_clientes_loader import ContrapartidaClientesLoader
 from loaders.contrapartida_proveedores_loader import ContrapartidaProveedoresLoader
 from loaders.indicador_impuesto_loader import IndicadorImpuestoLoader
 from loaders.indicadores_iva_loader import IndicadorIvaLoader
+from loaders.visa_loader import VisaLoader
 from logger.logger import Logger
 
 LOGGER = Logger.get_logger(__name__)
@@ -55,6 +56,7 @@ class PeriodicImportService:
                 loaders,
                 settings.periodic_data_dir,
             )
+            available_files.extend(self._get_visa_files(settings.visa_data_dir))
 
             if not available_files:
                 LOGGER.info("No Excel files available for periodic import")
@@ -70,11 +72,14 @@ class PeriodicImportService:
 
                 loader = item["loader"](database)
 
-                loader.load(dataframe)
+                if "numero_lote" in item:
+                    loader.load(dataframe, item["numero_lote"])
+                else:
+                    loader.load(dataframe)
 
                 self._move_to_history(
                     file_path,
-                    settings.periodic_data_dir,
+                    item["data_dir"],
                 )
 
                 LOGGER.info("Periodic import completed: %s", file_path.name)
@@ -86,19 +91,16 @@ class PeriodicImportService:
         self, loaders: list[dict], periodic_data_dir: Path
     ) -> list[dict]:
         """
-        Returns the periodic Excel files that are available for import
-        and older than 5 minutes.
+        Returns configured Excel files available in the existing periodic directory.
         """
 
         available_files = []
         minimum_age = timedelta(minutes=5)
         current_time = datetime.now()
-
         for item in loaders:
-
             file_path = periodic_data_dir / item["file"]
 
-            if not file_path.exists():
+            if not file_path.is_file():
                 continue
 
             file_age = current_time - datetime.fromtimestamp(file_path.stat().st_mtime)
@@ -114,6 +116,52 @@ class PeriodicImportService:
                 {
                     "file": file_path,
                     "loader": item["loader"],
+                    "data_dir": periodic_data_dir,
+                }
+            )
+
+        return available_files
+
+    def _get_visa_files(self, visa_data_dir: Path) -> list[dict]:
+        available_files = []
+        minimum_age = timedelta(minutes=5)
+        current_time = datetime.now()
+
+        if not visa_data_dir.is_dir():
+            return available_files
+
+        for batch_dir in visa_data_dir.iterdir():
+            if not batch_dir.is_dir() or batch_dir.name == "history":
+                continue
+
+            file_path = batch_dir / "REFERENCIA FRAS.VISA.xlsx"
+            if not file_path.is_file():
+                continue
+
+            try:
+                numero_lote = int(batch_dir.name)
+            except ValueError as error:
+                raise ValueError(
+                    f"VISA batch folder must be numeric: {batch_dir.name}"
+                ) from error
+
+            if numero_lote < 1:
+                raise ValueError("VISA batch number must be positive")
+
+            file_age = current_time - datetime.fromtimestamp(file_path.stat().st_mtime)
+            if file_age < minimum_age:
+                LOGGER.info(
+                    "VISA Excel is too recent and will not be imported: %s",
+                    file_path,
+                )
+                continue
+
+            available_files.append(
+                {
+                    "file": file_path,
+                    "loader": VisaLoader,
+                    "numero_lote": numero_lote,
+                    "data_dir": visa_data_dir,
                 }
             )
 
@@ -126,9 +174,11 @@ class PeriodicImportService:
         """
 
         history_folder = periodic_data_dir / "history"
+        if file_path.parent != periodic_data_dir:
+            history_folder = history_folder / file_path.parent.name
         history_folder.mkdir(parents=True, exist_ok=True)
 
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
 
         history_file = (
             history_folder / f"{file_path.stem}_{timestamp}{file_path.suffix}"
