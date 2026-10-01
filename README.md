@@ -35,6 +35,20 @@ Main responsibilities:
 * Move processed files to the corresponding SFTP output folder.
 * Provide centralized logging with automatic log rotation.
 
+### Email Importer
+
+Connects to an IMAP mailbox and imports PDF attachments from unread emails.
+
+Main responsibilities:
+
+* Connect to the configured IMAP server.
+* Authenticate and access the configured mailbox folder.
+* Search for unread emails.
+* Download PDF attachments to the configured output folder.
+* Mark successfully processed emails as read.
+* Keep emails unread when attachment processing fails, allowing them to be retried.
+* Provide centralized logging with automatic log rotation.
+
 ---
 
 ## Project Structure
@@ -58,15 +72,24 @@ Main responsibilities:
 │   │   ├── main.py
 │   │   └── periodic_import.py
 │   │
-│   └── export_service/
+│   ├── export_service/
+│   │   ├── config/
+│   │   ├── logger/
+│   │   ├── processor/
+│   │   ├── scanner/
+│   │   ├── services/
+│   │   ├── .env.example
+│   │   └── main.py
+│   │
+│   └── email_importer/
+│       ├── checks/
 │       ├── config/
 │       ├── logger/
 │       ├── processor/
-│       ├── scanner/
 │       ├── services/
 │       ├── .env.example
 │       └── main.py
-│
+│    
 ├── .python-version
 ├── pyproject.toml
 ├── uv.lock
@@ -171,9 +194,30 @@ SFTP_ERROR_FOLDER=
 
 The `.env` files contain environment-specific configuration and must not be committed to the repository.
 
+### Email Importer
+
+Create the environment file from the provided template:
+
+```bash
+cp src/email_importer/.env.example src/email_importer/.env
+```
+
+```env
+IMAP_SERVER=imap.nombreempresa.net
+IMAP_PORT=993
+IMAP_USER=usuario@nombreempresa.net
+IMAP_PASSWORD=
+IMAP_FOLDER=INBOX
+
+PDF_OUTPUT_FOLDER=
+
+LOG_LEVEL=INFO
+```
+
 ---
 
 ## Configuration Check
+### Database Loader
 
 The database loader provides a configuration check to validate the application configuration and database connection before execution.
 
@@ -181,6 +225,13 @@ The database loader provides a configuration check to validate the application c
 uv run src/database_loader/main.py --check
 ```
 
+### Email Importer
+
+The email importer check validates connectivity to the configured IMAP server and access to the configured mailbox folder.
+
+```bash
+uv run src/email_importer/main.py --check
+```
 ---
 
 ## Running the Services
@@ -205,11 +256,19 @@ The periodic import process reads the available Excel files from `PERIODIC_DATA_
 uv run src/export_service/main.py
 ```
 
+### Email Importer
+
+```bash
+uv run src/email_importer/main.py
+```
+
+The email importer searches for unread emails, downloads their PDF attachments to the configured output folder and marks successfully processed emails as read.
+
 ---
 
 ## Logging
 
-Both services provide centralized logging with automatic log rotation.
+All services provide centralized logging with automatic log rotation.
 
 Logging configuration:
 
