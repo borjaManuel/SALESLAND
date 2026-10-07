@@ -21,6 +21,11 @@ class Settings:
     def visa_data_dir(self) -> Path:
         return Path(os.getenv("VISA_DATA_DIR", str(self.periodic_data_dir)))
 
+    @property
+    def visa_output_dir(self) -> Path | None:
+        value = os.getenv("VISA_OUTPUT_DIR")
+        return Path(value) if value else None
+
 
 def load_settings() -> Settings:
     """
