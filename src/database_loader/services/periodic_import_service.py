@@ -6,6 +6,7 @@ from config.settings import load_settings
 from database.connection import Database
 from database.initializer import DatabaseInitializer
 from excel.reader import ExcelReader
+from loaders.clase_facturas_emitidas_loader import ClaseFacturasEmitidasLoader
 from loaders.contrapartida_clientes_loader import ContrapartidaClientesLoader
 from loaders.contrapartida_proveedores_loader import ContrapartidaProveedoresLoader
 from loaders.indicador_impuesto_loader import IndicadorImpuestoLoader
@@ -49,6 +50,10 @@ class PeriodicImportService:
                 {
                     "file": "INDICADOR_IVA.xlsx",
                     "loader": IndicadorIvaLoader,
+                },
+                {
+                    "file": "CLASE_FACTURAS_EMITIDAS.xlsx",
+                    "loader": ClaseFacturasEmitidasLoader,
                 },
             ]
 
