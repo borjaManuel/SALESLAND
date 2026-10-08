@@ -231,6 +231,13 @@ class DatabaseInitializer:
         );
         """
 
+        create_clase_facturas_emitidas = """
+        CREATE TABLE IF NOT EXISTS clase_facturas_emitidas (
+            pep VARCHAR(20) PRIMARY KEY,
+            clase_factura VARCHAR(50) NOT NULL
+        );
+        """
+
         with self.database.engine.begin() as connection:
             connection.execute(text(create_excell_visa))
             connection.execute(text(create_kna1))
@@ -247,4 +254,5 @@ class DatabaseInitializer:
             connection.execute(text(create_contrapartida_proveedores))
             connection.execute(text(create_indicador_impuesto))
             connection.execute(text(create_indicador_iva))
+            connection.execute(text(create_clase_facturas_emitidas))
         LOGGER.info("Database tables initialized successfully")
