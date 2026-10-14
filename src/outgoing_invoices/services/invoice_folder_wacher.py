@@ -1,15 +1,15 @@
-import logging
 import shutil
 import time
 from pathlib import Path
 
 from config.settings import Settings
+from logger.logger import InvoiceExcelLogger
 from services.invoice_csv_exporter import InvoiceCSVExporter
 from services.invoice_excel_loader import extract_invoice
 from watchdog.events import FileSystemEvent, FileSystemEventHandler
 from watchdog.observers import Observer
 
-logger = logging.getLogger(__name__)
+logger = InvoiceExcelLogger.get_logger()
 
 
 class InvoiceFolderHandler(FileSystemEventHandler):
