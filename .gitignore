@@ -20,3 +20,5 @@ src/export_service/TEST_SFTP_OUTPUT/
 src/export_service/TEST_SFTP_ERROR/
 periodic/
 pdf_imports/
+src/outgoing_invoices/EXCEL_INPUT_FOLDER/
+src/outgoing_invoices/CSV_OUTPUT_FOLDER/
