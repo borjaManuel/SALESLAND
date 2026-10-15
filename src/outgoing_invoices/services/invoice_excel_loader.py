@@ -5,9 +5,12 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from logger.logger import InvoiceExcelLogger
 from openpyxl import load_workbook
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.worksheet import Worksheet
+
+logger = InvoiceExcelLogger.get_logger()
 
 
 @dataclass
@@ -16,9 +19,12 @@ class InvoiceData:
 
     client: str | None = None
     tax_id: str | None = None
-    address: str | None = None
+    address: list[str] | None = None
     is_self_billing: bool = False
     invoice_number: str | None = None
+    peps: list[str] = field(default_factory=list)
+    pep_amounts: list[str] = field(default_factory=list)
+    email: str | None = None
 
     descriptions: list[str] = field(default_factory=list)
     quantities: list[str] = field(default_factory=list)
@@ -56,6 +62,16 @@ class InvoiceData:
                     f"Locations for '{field_name}' must match the number of lines."
                 )
 
+        if len(self.peps) != len(self.pep_amounts):
+            raise ValueError("PEP and PEP amount arrays must have equal lengths.")
+
+        for field_name in ("peps", "pep_amounts"):
+            field_locations = self.locations.get(field_name, [])
+            if len(field_locations) != len(self.peps):
+                raise ValueError(
+                    f"Locations for '{field_name}' must match the number of PEPs."
+                )
+
     def to_dict(self) -> dict[str, Any]:
         """Return extracted invoice data, including source cell references."""
         self.validate()
@@ -66,6 +82,9 @@ class InvoiceData:
             "address": self.address,
             "is_self_billing": self.is_self_billing,
             "invoice_number": self.invoice_number,
+            "peps": self.peps,
+            "pep_amounts": self.pep_amounts,
+            "email": self.email,
             "descriptions": self.descriptions,
             "quantities": self.quantities,
             "unit_prices": self.unit_prices,
@@ -105,6 +124,11 @@ class InvoiceExcelLoader:
 
     IGNORED_DETAIL_PATTERN = re.compile(
         r"\b(?:FACTORING|EXENTO\s+IVA|REGLA\s+DE\s+NEGOCIO|" r"VENCIMIENTO|IBAN)\b",
+        re.IGNORECASE,
+    )
+
+    EMAIL_PATTERN = re.compile(
+        r"\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b",
         re.IGNORECASE,
     )
 
@@ -151,6 +175,8 @@ class InvoiceExcelLoader:
             self._extract_client(rows, invoice)
             self._extract_totals(rows, invoice)
             self._extract_lines(rows, invoice)
+            self._extract_distribution(rows, invoice)
+            self._extract_email(rows, invoice)
 
             invoice.validate()
             return invoice
@@ -193,16 +219,32 @@ class InvoiceExcelLoader:
         rows: list[list[str]],
         invoice: InvoiceData,
     ) -> bool:
-        """Detect self-billing and record the cells containing its label."""
-        references = [
-            self._get_cell_reference(row_index, column_index)
-            for row_index, row in enumerate(rows)
-            for column_index, value in enumerate(row)
-            if re.search(r"\bAUTOFACTURA\b", value, re.IGNORECASE)
-        ]
+        """Detect self-billing from the checkbox next to its label."""
+        for row_index, row in enumerate(rows):
+            for column_index, value in enumerate(row):
+                if not re.search(r"\bAUTOFACTURA\b", value, re.IGNORECASE):
+                    continue
 
-        invoice.locations["is_self_billing"] = references
-        return bool(references)
+                checkbox_column = column_index + 2
+
+                if checkbox_column >= len(row):
+                    continue
+
+                checkbox_value = str(row[checkbox_column]).strip()
+
+                if checkbox_value.upper() == "X":
+                    invoice.locations["is_self_billing"] = [
+                        self._get_cell_reference(row_index, checkbox_column)
+                    ]
+                    return True
+
+                invoice.locations["is_self_billing"] = [
+                    self._get_cell_reference(row_index, checkbox_column)
+                ]
+                return False
+
+        invoice.locations["is_self_billing"] = []
+        return False
 
     def _extract_invoice_number(
         self,
@@ -250,7 +292,7 @@ class InvoiceExcelLoader:
         rows: list[list[str]],
         invoice: InvoiceData,
     ) -> None:
-        """Extract client identity and address with their source locations."""
+        """Extract client identity and address from the client block."""
         start_index = next(
             (
                 index
@@ -270,31 +312,69 @@ class InvoiceExcelLoader:
         if start_index is None:
             return
 
+        # Find the column containing the client section heading.
+        header_row = rows[start_index]
+        header_column = next(
+            (
+                column_index
+                for column_index, value in enumerate(header_row)
+                if re.search(r"\bDATOS\s+CLIENTE\b", value, re.IGNORECASE)
+            ),
+            None,
+        )
+
+        if header_column is None:
+            return
+
         client_lines: list[tuple[str, list[str]]] = []
 
         for row_index in range(start_index + 1, len(rows)):
             row = rows[row_index]
+
+            # Only read cells in the client block, to the right of its heading.
             cells = [
-                (column_index, value) for column_index, value in enumerate(row) if value
+                (column_index, value.strip())
+                for column_index, value in enumerate(row)
+                if column_index >= header_column and value and value.strip()
             ]
 
             if not cells:
                 continue
 
-            text = " ".join(value for _, value in cells)
+            text = " ".join(value for _, value in cells).strip()
 
-            if re.search(r"\bDESCRIPCIÓN\b", text, re.IGNORECASE):
+            # Stop when the invoice details section begins.
+            if re.search(
+                r"\b(DESCRIPCIÓN|CANT\.?|PRECIO\s+UNITARIO|IMPORTE|SUBTOTAL|"
+                r"TIPO\s+IMPOSITIVO|IMPUESTOS|TOTAL|N[.º°]?\s*DE\s*FACTURA|FECHA)\b",
+                text,
+                re.IGNORECASE,
+            ):
                 break
 
-            if re.search(r"\bAUTOFACTURA\b", text, re.IGNORECASE):
+            # Do not include invoice number/date or payment-attention text.
+            if re.search(
+                r"\b(N[.º°]?\s*DE\s*FACTURA|FECHA|ATT\.?)\b",
+                text,
+                re.IGNORECASE,
+            ):
                 continue
+
+            if re.search(r"\bAUTOFACTURA\b", text, re.IGNORECASE):
+                cells = [
+                    (column_index, value)
+                    for column_index, value in cells
+                    if not re.search(r"\bAUTOFACTURA\b", value, re.IGNORECASE)
+                    and not re.fullmatch(r"x", value, re.IGNORECASE)
+                ]
+                if not cells:
+                    continue
+                text = " ".join(value for _, value in cells).strip()
 
             tax_id_match = self.TAX_ID_PATTERN.search(text)
 
             if tax_id_match:
                 invoice.tax_id = tax_id_match.group(1).upper()
-
-                # The identifier can share a cell with its label.
                 tax_cell = next(
                     (
                         (column_index, value)
@@ -303,29 +383,10 @@ class InvoiceExcelLoader:
                     ),
                     None,
                 )
-
                 if tax_cell is not None:
                     invoice.locations["tax_id"] = self._get_cell_reference(
-                        row_index,
-                        tax_cell[0],
+                        row_index, tax_cell[0]
                     )
-                else:
-                    invoice.locations["tax_id"] = [
-                        self._get_cell_reference(row_index, column_index)
-                        for column_index, _ in cells
-                    ]
-
-                remaining_text = (
-                    text[: tax_id_match.start()] + text[tax_id_match.end() :]
-                ).strip(" :\t")
-
-                if remaining_text:
-                    references = [
-                        self._get_cell_reference(row_index, column_index)
-                        for column_index, _ in cells
-                    ]
-                    client_lines.append((remaining_text, references))
-
                 continue
 
             references = [
@@ -336,13 +397,13 @@ class InvoiceExcelLoader:
 
         if client_lines:
             invoice.client = client_lines[0][0] or None
-            invoice.locations["client"] = client_lines[0][1]
+            invoice.locations["client"] = client_lines[0][1][0]
 
         if len(client_lines) > 1:
             address_lines = client_lines[1:]
-            invoice.address = ", ".join(text for text, _ in address_lines) or None
+            invoice.address = [text for text, _ in address_lines]
             invoice.locations["address"] = [
-                reference for _, references in address_lines for reference in references
+                references[0] for _, references in address_lines if references
             ]
 
     def _extract_totals(
@@ -432,20 +493,17 @@ class InvoiceExcelLoader:
             ]
 
             description_cells = [
-                (column_index, value)
+                (column_index, value.strip())
                 for column_index, value in cells
-                if not self._is_numeric_cell(value)
+                if not self._is_numeric_cell(value) and value.strip()
             ]
 
-            description = " ".join(value for _, value in description_cells).strip()
-
-            if not description:
+            if not description_cells:
                 continue
 
             quantity = ""
             unit_price = ""
             amount = ""
-
             quantity_location = ""
             unit_price_location = ""
             amount_location = ""
@@ -470,20 +528,27 @@ class InvoiceExcelLoader:
                     amount_cell[0],
                 )
 
-            description_location = [
-                self._get_cell_reference(row_index, column_index)
-                for column_index, _ in description_cells
-            ]
+            for column_index, description in description_cells:
+                invoice.descriptions.append(description)
+                invoice.quantities.append(quantity)
+                invoice.unit_prices.append(unit_price)
+                invoice.amounts.append(amount)
 
-            invoice.descriptions.append(description)
-            invoice.quantities.append(quantity)
-            invoice.unit_prices.append(unit_price)
-            invoice.amounts.append(amount)
+                locations["descriptions"].append(
+                    self._get_cell_reference(row_index, column_index)
+                )
+                locations["quantities"].append(quantity_location)
+                locations["unit_prices"].append(unit_price_location)
+                locations["amounts"].append(amount_location)
 
-            locations["descriptions"].append(description_location)
-            locations["quantities"].append(quantity_location)
-            locations["unit_prices"].append(unit_price_location)
-            locations["amounts"].append(amount_location)
+        logger.info(
+            "Descripciones: %s | Cantidades: %s | Precios: %s | Importes: %s | Referencias: %s",
+            len(invoice.descriptions),
+            len(invoice.quantities),
+            len(invoice.unit_prices),
+            len(invoice.amounts),
+            len(locations["descriptions"]),
+        )
 
     def _find_detail_header(
         self,
@@ -506,6 +571,138 @@ class InvoiceExcelLoader:
     def _is_numeric_cell(self, value: str) -> bool:
         """Check whether a complete cell contains a numeric value."""
         return bool(self.NUMBER_PATTERN.fullmatch(value))
+
+    def _extract_distribution(
+        self,
+        rows: list[list[str]],
+        invoice: InvoiceData,
+    ) -> None:
+        """Extract PEP codes and amounts from the REPARTO section."""
+        invoice.peps = []
+        invoice.pep_amounts = []
+        invoice.locations["peps"] = []
+        invoice.locations["pep_amounts"] = []
+
+        reparto_position = None
+
+        for row_index, row in enumerate(rows):
+            for column_index, value in enumerate(row):
+                if re.fullmatch(r"REPARTO", value.strip(), re.IGNORECASE):
+                    reparto_position = (row_index, column_index)
+                    break
+            if reparto_position is not None:
+                break
+
+        if reparto_position is None:
+            return
+
+        start_row, start_column = reparto_position
+
+        stop_pattern = re.compile(
+            r"\b(?:MAIL\s+DE\s+ENV[IÍ]O|SUBTOTAL|TIPO\s+IMPOSITIVO|"
+            r"IMPUESTOS?|TOTAL)\b",
+            re.IGNORECASE,
+        )
+
+        pep_pattern = re.compile(r"(?=.*\d)[A-Z0-9._/-]+", re.IGNORECASE)
+
+        empty_rows = 0
+        max_empty_rows = 2
+
+        for row_index in range(start_row + 1, len(rows)):
+            row = rows[row_index]
+            row_text = " ".join(value for value in row if value)
+
+            if stop_pattern.search(row_text):
+                break
+
+            pep_value = row[start_column] if start_column < len(row) else ""
+            amount_column = start_column + 1
+            amount_value = row[amount_column] if amount_column < len(row) else ""
+
+            if not pep_value and not amount_value:
+                empty_rows += 1
+                if empty_rows >= max_empty_rows:
+                    break
+                continue
+
+            empty_rows = 0
+
+            if not pep_value or not amount_value:
+                continue
+
+            if not pep_pattern.fullmatch(pep_value):
+                continue
+
+            normalized_amount = amount_value.replace("\xa0", "").replace(" ", "")
+
+            if not self._is_numeric_cell(normalized_amount):
+                continue
+
+            invoice.peps.append(pep_value)
+            invoice.pep_amounts.append(amount_value)
+
+            invoice.locations["peps"].append(
+                self._get_cell_reference(row_index, start_column)
+            )
+            invoice.locations["pep_amounts"].append(
+                self._get_cell_reference(row_index, amount_column)
+            )
+
+        logger.info(
+            "Reparto: %s PEP | Referencias PEP: %s | Referencias importes: %s",
+            len(invoice.peps),
+            len(invoice.locations["peps"]),
+            len(invoice.locations["pep_amounts"]),
+        )
+
+    def _extract_email(
+        self,
+        rows: list[list[str]],
+        invoice: InvoiceData,
+    ) -> None:
+        """Extract the email address next to the MAIL DE ENVIO label."""
+        invoice.email = None
+        invoice.locations["email"] = ""
+
+        label_pattern = re.compile(
+            r"\bMAIL\s+DE\s+ENV[IÍ]O\b",
+            re.IGNORECASE,
+        )
+
+        for row_index, row in enumerate(rows):
+            for column_index, value in enumerate(row):
+                match = label_pattern.search(value)
+
+                if not match:
+                    continue
+
+                inline_text = value[match.end() :]
+                email_match = self.EMAIL_PATTERN.search(inline_text)
+
+                if email_match:
+                    invoice.email = email_match.group(0)
+                    invoice.locations["email"] = self._get_cell_reference(
+                        row_index,
+                        column_index,
+                    )
+                    return
+
+                for next_column in range(column_index + 1, len(row)):
+                    if not row[next_column]:
+                        continue
+
+                    email_match = self.EMAIL_PATTERN.search(row[next_column])
+
+                    if email_match:
+                        invoice.email = email_match.group(0)
+                        invoice.locations["email"] = self._get_cell_reference(
+                            row_index,
+                            next_column,
+                        )
+                    return
+
+                return
 
 
 def extract_invoice(
