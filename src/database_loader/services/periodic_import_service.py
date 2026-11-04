@@ -9,6 +9,7 @@ from excel.reader import ExcelReader
 from loaders.clase_facturas_emitidas_loader import ClaseFacturasEmitidasLoader
 from loaders.contrapartida_clientes_loader import ContrapartidaClientesLoader
 from loaders.contrapartida_proveedores_loader import ContrapartidaProveedoresLoader
+from loaders.emitidas_iban_vto_factoring_loader import EmitidasIbanVTOFactoringLoader
 from loaders.indicador_impuesto_loader import IndicadorImpuestoLoader
 from loaders.indicadores_iva_loader import IndicadorIvaLoader
 from loaders.visa_loader import VisaLoader
@@ -54,6 +55,10 @@ class PeriodicImportService:
                 {
                     "file": "CLASE_FACTURAS_EMITIDAS.xlsx",
                     "loader": ClaseFacturasEmitidasLoader,
+                },
+                {
+                    "file": "EMITIDA_IBAN_VTO_FACTORING.xlsx",
+                    "loader": EmitidasIbanVTOFactoringLoader,
                 },
             ]
 
