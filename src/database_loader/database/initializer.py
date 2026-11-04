@@ -238,6 +238,16 @@ class DatabaseInitializer:
         );
         """
 
+        create_emitidas_iban_vto_factoring = """
+        CREATE TABLE IF NOT EXISTS emitidas_iban_vto_factoring (
+            codigo INTEGER PRIMARY KEY,
+            cliente VARCHAR(150) NOT NULL,
+            vencimiento VARCHAR(50),
+            iban VARCHAR(34),
+            factoring TEXT
+        );
+        """
+
         with self.database.engine.begin() as connection:
             connection.execute(text(create_excell_visa))
             connection.execute(text(create_kna1))
@@ -255,4 +265,5 @@ class DatabaseInitializer:
             connection.execute(text(create_indicador_impuesto))
             connection.execute(text(create_indicador_iva))
             connection.execute(text(create_clase_facturas_emitidas))
+            connection.execute(text(create_emitidas_iban_vto_factoring))
         LOGGER.info("Database tables initialized successfully")
