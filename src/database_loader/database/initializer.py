@@ -29,9 +29,28 @@ class DatabaseInitializer:
             factura VARCHAR(50) NOT NULL,
             cuenta_contable VARCHAR(20) NOT NULL,
             pep VARCHAR(20) NOT NULL,
-            numero_lote BIGINT NOT NULL,
+            numero_lote VARCHAR(30) NOT NULL,
             UNIQUE (factura, numero_lote)
         );
+        """
+        # VISA batches used to be numeric; they are now identified by the
+        # batch folder name (DD-MM-YYYY[_N]), so older tables are migrated.
+        migrate_excell_visa_numero_lote = """
+        DO $$
+        BEGIN
+            IF EXISTS (
+                SELECT 1
+                FROM information_schema.columns
+                WHERE table_schema = current_schema()
+                  AND table_name = 'excell_visa'
+                  AND column_name = 'numero_lote'
+                  AND data_type <> 'character varying'
+            ) THEN
+                ALTER TABLE excell_visa
+                    ALTER COLUMN numero_lote TYPE VARCHAR(30)
+                    USING CAST(numero_lote AS VARCHAR(30));
+            END IF;
+        END $$;
         """
         create_kna1 = """
         CREATE TABLE IF NOT EXISTS kna1 (
@@ -250,6 +269,7 @@ class DatabaseInitializer:
 
         with self.database.engine.begin() as connection:
             connection.execute(text(create_excell_visa))
+            connection.execute(text(migrate_excell_visa_numero_lote))
             connection.execute(text(create_kna1))
             connection.execute(text(create_anla))
             connection.execute(text(create_knb1))
