@@ -18,13 +18,24 @@ class Settings:
     periodic_data_dir: Path
 
     @property
-    def visa_data_dir(self) -> Path:
-        return Path(os.getenv("VISA_DATA_DIR", str(self.periodic_data_dir)))
+    def visa_data_dir(self) -> Path | None:
+        """Shared folder where the customer leaves the VISA batches."""
+        value = os.getenv("VISA_DATA_DIR")
+        return Path(value) if value else None
 
     @property
     def visa_output_dir(self) -> Path | None:
+        """Local folder watched by InfoInput for the VISA invoices."""
         value = os.getenv("VISA_OUTPUT_DIR")
         return Path(value) if value else None
+
+    @property
+    def visa_history_dir(self) -> Path:
+        """Local folder where the processed VISA Excel files are kept."""
+        value = os.getenv("VISA_HISTORY_DIR")
+        if value:
+            return Path(value)
+        return self.periodic_data_dir / "history" / "visa"
 
 
 def load_settings() -> Settings:
