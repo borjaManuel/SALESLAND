@@ -1,3 +1,4 @@
+import re
 import shutil
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -16,6 +17,12 @@ from loaders.visa_loader import VisaLoader
 from logger.logger import Logger
 
 LOGGER = Logger.get_logger(__name__)
+
+VISA_EXCEL_NAME = "REFERENCIA FRAS.VISA.xlsx"
+
+# Batch folders are named after their date, with an optional sequence
+# number when there is more than one batch on the same day.
+VISA_BATCH_NAME_PATTERN = re.compile(r"(?P<fecha>\d{2}-\d{2}-\d{4})(?:_\d+)?")
 
 
 class PeriodicImportService:
@@ -70,6 +77,7 @@ class PeriodicImportService:
                 self._get_visa_files(
                     settings.visa_data_dir,
                     settings.visa_output_dir,
+                    settings.visa_history_dir,
                 )
             )
 
@@ -102,7 +110,7 @@ class PeriodicImportService:
 
                 self._move_to_history(
                     file_path,
-                    item["data_dir"],
+                    item["history_dir"],
                 )
 
                 if visa_moves is not None:
@@ -147,50 +155,70 @@ class PeriodicImportService:
                 {
                     "file": file_path,
                     "loader": item["loader"],
-                    "data_dir": periodic_data_dir,
+                    "history_dir": periodic_data_dir / "history",
                 }
             )
 
         return available_files
 
     def _get_visa_files(
-        self, visa_data_dir: Path, visa_output_dir: Path | None
+        self,
+        visa_data_dir: Path | None,
+        visa_output_dir: Path | None,
+        visa_history_dir: Path,
     ) -> list[dict]:
+        """
+        Returns the VISA batches available in the shared folder.
+
+        Each batch is a folder named after its date (DD-MM-YYYY, or
+        DD-MM-YYYY_N when there is more than one batch on the same day)
+        containing the reference Excel and the invoice PDFs. A batch is
+        only processed once none of its files has been modified during
+        the last minutes, so batches still being copied are skipped.
+        """
+
         available_files = []
         minimum_age = timedelta(minutes=5)
         current_time = datetime.now()
 
-        if not visa_data_dir.is_dir():
+        if visa_data_dir is None:
+            LOGGER.info("VISA_DATA_DIR is not configured, skipping VISA batches")
             return available_files
 
-        for batch_dir in visa_data_dir.iterdir():
-            if not batch_dir.is_dir() or batch_dir.name == "history":
+        if not visa_data_dir.is_dir():
+            LOGGER.error("VISA shared folder is not accessible: %s", visa_data_dir)
+            return available_files
+
+        for batch_dir in sorted(visa_data_dir.iterdir()):
+            if not batch_dir.is_dir():
                 continue
 
-            file_path = batch_dir / "REFERENCIA FRAS.VISA.xlsx"
+            file_path = batch_dir / VISA_EXCEL_NAME
             if not file_path.is_file():
                 continue
 
-            try:
-                numero_lote = int(batch_dir.name)
-            except ValueError as error:
-                raise ValueError(
-                    f"VISA batch folder must be numeric: {batch_dir.name}"
-                ) from error
-
-            if numero_lote < 1:
-                raise ValueError("VISA batch number must be positive")
+            numero_lote = batch_dir.name
+            if not self._is_valid_visa_batch_name(numero_lote):
+                LOGGER.error(
+                    "VISA batch folder name must be DD-MM-YYYY or DD-MM-YYYY_N, "
+                    "skipping it: %s",
+                    batch_dir,
+                )
+                continue
 
             if visa_output_dir is None:
                 raise RuntimeError(
                     "VISA_OUTPUT_DIR must be configured to process VISA batches"
                 )
 
-            file_age = current_time - datetime.fromtimestamp(file_path.stat().st_mtime)
-            if file_age < minimum_age:
+            batch_files = [item for item in batch_dir.iterdir() if item.is_file()]
+            last_modification = max(
+                datetime.fromtimestamp(item.stat().st_mtime) for item in batch_files
+            )
+            if current_time - last_modification < minimum_age:
                 LOGGER.info(
-                    "VISA Excel is too recent and will not be imported: %s",
-                    file_path,
+                    "VISA batch is too recent and will not be imported yet: %s",
+                    batch_dir,
                 )
                 continue
 
@@ -199,22 +227,32 @@ class PeriodicImportService:
                     "file": file_path,
                     "loader": VisaLoader,
                     "numero_lote": numero_lote,
-                    "data_dir": visa_data_dir,
+                    "history_dir": visa_history_dir / numero_lote,
                     "output_dir": visa_output_dir,
                 }
             )
 
         return available_files
 
-    def _move_to_history(self, file_path: Path, periodic_data_dir: Path) -> None:
+    @staticmethod
+    def _is_valid_visa_batch_name(name: str) -> bool:
+        match = VISA_BATCH_NAME_PATTERN.fullmatch(name)
+        if match is None:
+            return False
+
+        try:
+            datetime.strptime(match.group("fecha"), "%d-%m-%Y")
+        except ValueError:
+            return False
+
+        return True
+
+    def _move_to_history(self, file_path: Path, history_folder: Path) -> None:
         """
         Moves a successfully processed file to the history folder
         and adds the processing timestamp to its filename.
         """
 
-        history_folder = periodic_data_dir / "history"
-        if file_path.parent != periodic_data_dir:
-            history_folder = history_folder / file_path.parent.name
         history_folder.mkdir(parents=True, exist_ok=True)
 
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
@@ -228,25 +266,30 @@ class PeriodicImportService:
         LOGGER.info("File moved to history: %s", history_file)
 
     def _get_visa_batch_moves(
-        self, excel_path: Path, numero_lote: int, visa_output_dir: Path
+        self, excel_path: Path, numero_lote: str, visa_output_dir: Path
     ) -> list[tuple[Path, Path]]:
         """
-        Returns the source and target paths of the VISA batch files to move,
-        adding the "visa" and batch number suffixes to each filename.
-        Fails before any processing if a target file already exists.
+        Returns the source and target paths of the VISA invoice PDFs to move
+        to the local InfoInput folder, adding the batch name as a suffix to
+        each filename (e.g. "1.pdf" -> "1_13-11-2026.pdf").
+        Fails before any processing if the batch has no PDFs or a target
+        file already exists.
         """
 
         batch_dir = excel_path.parent
-        target_dir = visa_output_dir / batch_dir.name
+        target_dir = visa_output_dir / numero_lote
 
         moves = [
             (
                 file_path,
-                target_dir / f"{file_path.stem}_visa_{numero_lote}{file_path.suffix}",
+                target_dir / f"{file_path.stem}_{numero_lote}{file_path.suffix}",
             )
-            for file_path in batch_dir.iterdir()
-            if file_path.is_file() and file_path != excel_path
+            for file_path in sorted(batch_dir.iterdir())
+            if file_path.is_file() and file_path.suffix.lower() == ".pdf"
         ]
+
+        if not moves:
+            raise ValueError(f"VISA batch does not contain any PDF: {batch_dir}")
 
         existing = [target.name for _, target in moves if target.exists()]
         if existing:
@@ -259,16 +302,17 @@ class PeriodicImportService:
     def _move_visa_batch(
         self,
         batch_dir: Path,
-        numero_lote: int,
+        numero_lote: str,
         visa_output_dir: Path,
         moves: list[tuple[Path, Path]],
     ) -> None:
         """
-        Moves the remaining files of a processed VISA batch to the output
-        folder and removes the batch folder once it is empty.
+        Moves the invoice PDFs of a processed VISA batch from the shared
+        folder to the local InfoInput folder and removes the batch folder
+        once it is empty.
         """
 
-        target_dir = visa_output_dir / batch_dir.name
+        target_dir = visa_output_dir / numero_lote
         target_dir.mkdir(parents=True, exist_ok=True)
 
         for file_path, target in moves:
