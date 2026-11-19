@@ -24,13 +24,13 @@ class VisaLoader(BaseLoader):
         if dataframe.empty:
             raise ValueError("VISA Excel does not contain any records")
 
-        try:
-            numero_lote = int(numero_lote)
-        except (TypeError, ValueError) as error:
-            raise ValueError("numero_lote must be an integer") from error
+        numero_lote = str(numero_lote or "").strip()
 
-        if numero_lote < 1:
-            raise ValueError("numero_lote must be a positive integer")
+        if not numero_lote:
+            raise ValueError("numero_lote cannot be empty")
+
+        if len(numero_lote) > 30:
+            raise ValueError("numero_lote exceeds maximum length 30")
 
         for column in ("factura", "cuenta_contable", "pep"):
             dataframe[column] = dataframe[column].astype("string").str.strip()
