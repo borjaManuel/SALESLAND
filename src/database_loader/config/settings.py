@@ -1,4 +1,5 @@
 import os
+import re
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -16,6 +17,21 @@ class Settings:
     db_user: str
     db_password: str
     periodic_data_dir: Path
+
+    @property
+    def db_schema(self) -> str | None:
+        """
+        PostgreSQL schema where the tables are created and loaded
+        (e.g. "exchange"). When not set, the database default is used.
+        """
+        value = os.getenv("DB_SCHEMA", "").strip()
+        if not value:
+            return None
+
+        if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", value):
+            raise RuntimeError(f"DB_SCHEMA is not a valid schema name: {value}")
+
+        return value
 
     @property
     def visa_data_dir(self) -> Path | None:
