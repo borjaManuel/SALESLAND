@@ -73,58 +73,85 @@ class PeriodicImportService:
                 loaders,
                 settings.periodic_data_dir,
             )
-            available_files.extend(
-                self._get_visa_files(
-                    settings.visa_data_dir,
-                    settings.visa_output_dir,
-                    settings.visa_history_dir,
+            try:
+                available_files.extend(
+                    self._get_visa_files(
+                        settings.visa_data_dir,
+                        settings.visa_output_dir,
+                        settings.visa_history_dir,
+                    )
                 )
-            )
+            except OSError:
+                LOGGER.exception("Error reading VISA batches, skipping them")
 
             if not available_files:
                 LOGGER.info("No Excel files available for periodic import")
                 return
 
+            failed = []
+
             for item in available_files:
 
                 file_path = item["file"]
 
-                LOGGER.info("Starting periodic import: %s", file_path.name)
+                try:
+                    self._process_item(item, reader, database)
+                except Exception:
+                    # A wrong file must not block the remaining files and
+                    # VISA batches. It is kept in place to be fixed and
+                    # retried on the next execution.
+                    LOGGER.exception("Periodic import failed: %s", file_path)
+                    failed.append(str(file_path))
 
-                visa_moves = None
-                if "output_dir" in item:
-                    visa_moves = self._get_visa_batch_moves(
-                        file_path,
-                        item["numero_lote"],
-                        item["output_dir"],
-                    )
-
-                dataframe = reader.read(file_path)
-
-                loader = item["loader"](database)
-
-                if "numero_lote" in item:
-                    loader.load(dataframe, item["numero_lote"])
-                else:
-                    loader.load(dataframe)
-
-                self._move_to_history(
-                    file_path,
-                    item["history_dir"],
+            if failed:
+                raise RuntimeError(
+                    f"Periodic import failed for {len(failed)} file(s): "
+                    + ", ".join(failed)
                 )
-
-                if visa_moves is not None:
-                    self._move_visa_batch(
-                        file_path.parent,
-                        item["numero_lote"],
-                        item["output_dir"],
-                        visa_moves,
-                    )
-
-                LOGGER.info("Periodic import completed: %s", file_path.name)
 
         finally:
             database.dispose()
+
+    def _process_item(self, item: dict, reader: ExcelReader, database: Database):
+        """
+        Loads one periodic Excel file or VISA batch and moves its files.
+        """
+
+        file_path = item["file"]
+
+        LOGGER.info("Starting periodic import: %s", file_path.name)
+
+        visa_moves = None
+        if "output_dir" in item:
+            visa_moves = self._get_visa_batch_moves(
+                file_path,
+                item["numero_lote"],
+                item["output_dir"],
+            )
+
+        dataframe = reader.read(file_path)
+
+        loader = item["loader"](database)
+
+        if "numero_lote" in item:
+            loader.load(dataframe, item["numero_lote"])
+        else:
+            loader.load(dataframe)
+
+        self._move_to_history(
+            file_path,
+            item["history_dir"],
+        )
+
+        if visa_moves is not None:
+            self._move_visa_batch(
+                file_path.parent,
+                item["numero_lote"],
+                item["output_dir"],
+                visa_moves,
+            )
+
+        LOGGER.info("Periodic import completed: %s", file_path.name)
 
     def _get_available_files(
         self, loaders: list[dict], periodic_data_dir: Path
@@ -207,9 +234,12 @@ class PeriodicImportService:
                 continue
 
             if visa_output_dir is None:
-                raise RuntimeError(
-                    "VISA_OUTPUT_DIR must be configured to process VISA batches"
+                LOGGER.error(
+                    "VISA_OUTPUT_DIR must be configured to process VISA batches, "
+                    "skipping batch: %s",
+                    batch_dir,
                 )
+                continue
 
             batch_files = [item for item in batch_dir.iterdir() if item.is_file()]
             last_modification = max(
