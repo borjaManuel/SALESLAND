@@ -27,7 +27,15 @@ VISA_BATCH_NAME_PATTERN = re.compile(r"(?P<fecha>\d{2}-\d{2}-\d{4})(?:_\d+)?")
 
 class PeriodicImportService:
 
-    def run(self):
+    def run(self, include_periodic: bool = True, include_visa: bool = True):
+        """
+        Imports the available periodic Excel files and/or VISA batches.
+
+        periodic_import.py imports only the periodic files and
+        visa_import.py only the VISA batches, so that each one can be
+        scheduled with its own frequency without processing the same
+        files twice.
+        """
         settings = load_settings()
         database = Database(settings)
 
@@ -69,23 +77,31 @@ class PeriodicImportService:
                 },
             ]
 
-            available_files = self._get_available_files(
-                loaders,
-                settings.periodic_data_dir,
-            )
-            try:
+            available_files = []
+
+            if include_periodic:
                 available_files.extend(
-                    self._get_visa_files(
-                        settings.visa_data_dir,
-                        settings.visa_output_dir,
-                        settings.visa_history_dir,
+                    self._get_available_files(
+                        loaders,
+                        settings.periodic_data_dir,
                     )
                 )
-            except OSError:
-                LOGGER.exception("Error reading VISA batches, skipping them")
+
+            if include_visa:
+                try:
+                    available_files.extend(
+                        self._get_visa_files(
+                            settings.visa_data_dir,
+                            settings.visa_output_dir,
+                            settings.visa_history_dir,
+                            settings.visa_minimum_age,
+                        )
+                    )
+                except OSError:
+                    LOGGER.exception("Error reading VISA batches, skipping them")
 
             if not available_files:
-                LOGGER.info("No Excel files available for periodic import")
+                LOGGER.info("No Excel files available for import")
                 return
 
             failed = []
@@ -193,6 +209,7 @@ class PeriodicImportService:
         visa_data_dir: Path | None,
         visa_output_dir: Path | None,
         visa_history_dir: Path,
+        minimum_age: timedelta,
     ) -> list[dict]:
         """
         Returns the VISA batches available in the shared folder.
@@ -201,11 +218,10 @@ class PeriodicImportService:
         DD-MM-YYYY_N when there is more than one batch on the same day)
         containing the reference Excel and the invoice PDFs. A batch is
         only processed once none of its files has been modified during
-        the last minutes, so batches still being copied are skipped.
+        the last minimum_age, so batches still being copied are skipped.
         """
 
         available_files = []
-        minimum_age = timedelta(minutes=5)
         current_time = datetime.now()
 
         if visa_data_dir is None:
