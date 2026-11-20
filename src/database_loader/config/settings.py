@@ -1,6 +1,7 @@
 import os
 import re
 from dataclasses import dataclass
+from datetime import timedelta
 from pathlib import Path
 
 from config.paths import SRC_DIR
@@ -44,6 +45,28 @@ class Settings:
         """Local folder watched by InfoInput for the VISA invoices."""
         value = os.getenv("VISA_OUTPUT_DIR")
         return Path(value) if value else None
+
+    @property
+    def visa_minimum_age(self) -> timedelta:
+        """
+        Time a VISA batch must remain unchanged before being imported,
+        so that batches still being copied are skipped.
+        """
+        value = os.getenv("VISA_MINIMUM_AGE_MINUTES", "").strip()
+        if not value:
+            return timedelta(minutes=2)
+
+        try:
+            minutes = float(value)
+        except ValueError as error:
+            raise RuntimeError(
+                f"VISA_MINIMUM_AGE_MINUTES must be a number: {value}"
+            ) from error
+
+        if minutes < 0:
+            raise RuntimeError("VISA_MINIMUM_AGE_MINUTES cannot be negative")
+
+        return timedelta(minutes=minutes)
 
     @property
     def visa_history_dir(self) -> Path:
