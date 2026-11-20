@@ -14,6 +14,26 @@ class Settings:
     sftp_output_folder: Path
     sftp_error_folder: Path
 
+    @property
+    def visa_kodak_output_folder(self) -> Path:
+        """
+        Folder where the Kodak VISA job leaves the PDF/CSV pairs.
+        Defaults to the FACTURAS-VISA subfolder of KODAK_OUTPUT_FOLDER.
+        """
+        value = os.getenv("VISA_KODAK_OUTPUT_FOLDER", "").strip()
+        if value:
+            return Path(value)
+        return self.kodak_output_folder / "FACTURAS-VISA"
+
+    @property
+    def visa_sftp_output_folder(self) -> Path | None:
+        """
+        Shared folder where the VISA PDF/CSV pairs are moved, grouped by
+        the month of their batch. VISA export is skipped when not set.
+        """
+        value = os.getenv("VISA_SFTP_OUTPUT_FOLDER", "").strip()
+        return Path(value) if value else None
+
 
 def load_settings() -> Settings:
     """
