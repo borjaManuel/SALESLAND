@@ -1,19 +1,18 @@
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from config.settings import Settings
 from logger.logger import Logger
 
 logger = Logger.get_logger(__name__)
 
 
-def scan_files(settings: Settings) -> list[Path]:
+def scan_files(source_folder: Path) -> list[Path]:
     """
-    Scans the Kodak output folder and returns PDF and CSV files
-    older than 5 minutes.
+    Scans a Kodak output folder and returns PDF and CSV files
+    older than 5 minutes. Subfolders are not scanned.
 
     Args:
-        settings: Application configuration.
+        source_folder: Kodak output folder to scan.
 
     Returns:
         List of PDF and CSV files found in the Kodak output folder
@@ -23,8 +22,6 @@ def scan_files(settings: Settings) -> list[Path]:
         FileNotFoundError: If the Kodak output folder does not exist.
         NotADirectoryError: If the Kodak output path is not a directory.
     """
-    source_folder = settings.kodak_output_folder
-
     if not source_folder.exists():
         logger.error("Kodak output folder does not exist: %s", source_folder)
         raise FileNotFoundError(f"Kodak output folder does not exist: {source_folder}")
