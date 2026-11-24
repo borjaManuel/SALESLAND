@@ -1,5 +1,7 @@
+import os
 import re
 import shutil
+import stat
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -20,6 +22,9 @@ LOGGER = Logger.get_logger(__name__)
 
 # Each VISA batch contains one reference Excel, whatever its name.
 VISA_EXCEL_SUFFIX = ".xlsx"
+
+# Files created automatically by Windows/macOS that are not part of a batch.
+VISA_IGNORED_FILE_NAMES = {"thumbs.db", "desktop.ini", ".ds_store"}
 
 # Batch folders are named after their date, with an optional sequence
 # number when there is more than one batch on the same day.
@@ -254,9 +259,17 @@ class PeriodicImportService:
                 )
                 continue
 
-            batch_files = [item for item in batch_dir.iterdir() if item.is_file()]
+            batch_files = [
+                item
+                for item in batch_dir.iterdir()
+                if item.is_file() and not self._is_visa_ignored_file(item)
+            ]
             if not batch_files:
-                LOGGER.info("VISA batch folder is empty, skipping it: %s", batch_dir)
+                # Leftover of an already processed batch (or a folder the
+                # user has just created): remove it once it is old enough.
+                folder_modification = datetime.fromtimestamp(batch_dir.stat().st_mtime)
+                if current_time - folder_modification >= minimum_age:
+                    self._remove_visa_batch_dir(batch_dir)
                 continue
 
             last_modification = max(
@@ -270,12 +283,10 @@ class PeriodicImportService:
                 continue
 
             # The reference Excel can have any name, but there must be
-            # exactly one per batch. Office lock files (~$*.xlsx) are ignored.
+            # exactly one per batch (Office lock files ~$*.xlsx are already
+            # excluded from batch_files).
             excel_files = [
-                item
-                for item in batch_files
-                if item.suffix.lower() == VISA_EXCEL_SUFFIX
-                and not item.name.startswith("~$")
+                item for item in batch_files if item.suffix.lower() == VISA_EXCEL_SUFFIX
             ]
             if len(excel_files) != 1:
                 LOGGER.error(
@@ -393,8 +404,47 @@ class PeriodicImportService:
             len(moves),
         )
 
+        self._remove_visa_batch_dir(batch_dir)
+
+    @staticmethod
+    def _is_visa_ignored_file(file_path: Path) -> bool:
+        """
+        Returns whether a file is created automatically by Windows/Office
+        (thumbnails cache, folder settings, Excel lock files) and is not
+        part of the batch.
+        """
+        name = file_path.name.lower()
+        return name in VISA_IGNORED_FILE_NAMES or name.startswith("~$")
+
+    def _remove_visa_batch_dir(self, batch_dir: Path) -> None:
+        """
+        Removes a VISA batch folder from the shared folder once all its
+        files have been moved. System files are deleted first. If the
+        folder cannot be removed (e.g. it is open in another session), it
+        is kept and removal is retried on the next run.
+        """
+
+        for item in batch_dir.iterdir():
+            if item.is_file() and self._is_visa_ignored_file(item):
+                try:
+                    os.chmod(item, stat.S_IWRITE)
+                    item.unlink()
+                except OSError as error:
+                    LOGGER.warning("Could not delete %s: %s", item, error)
+
         if any(batch_dir.iterdir()):
             LOGGER.warning("VISA batch folder is not empty, keeping it: %s", batch_dir)
             return
 
-        batch_dir.rmdir()
+        try:
+            batch_dir.rmdir()
+        except OSError as error:
+            LOGGER.warning(
+                "Could not remove VISA batch folder, it will be retried on the "
+                "next run: %s (%s)",
+                batch_dir,
+                error,
+            )
+            return
+
+        LOGGER.info("VISA batch folder removed: %s", batch_dir)
