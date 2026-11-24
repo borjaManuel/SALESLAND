@@ -18,7 +18,8 @@ from logger.logger import Logger
 
 LOGGER = Logger.get_logger(__name__)
 
-VISA_EXCEL_NAME = "REFERENCIA FRAS.VISA.xlsx"
+# Each VISA batch contains one reference Excel, whatever its name.
+VISA_EXCEL_SUFFIX = ".xlsx"
 
 # Batch folders are named after their date, with an optional sequence
 # number when there is more than one batch on the same day.
@@ -236,10 +237,6 @@ class PeriodicImportService:
             if not batch_dir.is_dir():
                 continue
 
-            file_path = batch_dir / VISA_EXCEL_NAME
-            if not file_path.is_file():
-                continue
-
             numero_lote = batch_dir.name
             if not self._is_valid_visa_batch_name(numero_lote):
                 LOGGER.error(
@@ -258,6 +255,10 @@ class PeriodicImportService:
                 continue
 
             batch_files = [item for item in batch_dir.iterdir() if item.is_file()]
+            if not batch_files:
+                LOGGER.info("VISA batch folder is empty, skipping it: %s", batch_dir)
+                continue
+
             last_modification = max(
                 datetime.fromtimestamp(item.stat().st_mtime) for item in batch_files
             )
@@ -267,6 +268,27 @@ class PeriodicImportService:
                     batch_dir,
                 )
                 continue
+
+            # The reference Excel can have any name, but there must be
+            # exactly one per batch. Office lock files (~$*.xlsx) are ignored.
+            excel_files = [
+                item
+                for item in batch_files
+                if item.suffix.lower() == VISA_EXCEL_SUFFIX
+                and not item.name.startswith("~$")
+            ]
+            if len(excel_files) != 1:
+                LOGGER.error(
+                    "VISA batch must contain exactly one %s file, found %d, "
+                    "skipping it: %s",
+                    VISA_EXCEL_SUFFIX,
+                    len(excel_files),
+                    batch_dir,
+                )
+                continue
+
+            file_path = excel_files[0]
+            LOGGER.info("VISA batch %s uses Excel: %s", numero_lote, file_path.name)
 
             available_files.append(
                 {
